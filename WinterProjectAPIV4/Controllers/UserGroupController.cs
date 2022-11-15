@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WinterProjectAPIV4.DataTransferObjects;
@@ -93,6 +94,17 @@ namespace WinterProjectAPIV4.Controllers
             return Ok(AllGroupsList);
         }
 
+        [HttpGet("GetGroupByGroupID/{GroupID}")]
+        public async Task<ActionResult<List<UserGroup>>> GetAllGroupMembers(int GroupID)
+        {
+            List<UserGroup> GroupMembersList = await context.UserGroups
+                .Include(UserGroup => UserGroup.User)
+                .Include(Group => Group.Group)
+                .Where(Group => Group.GroupId == GroupID).ToListAsync();
+
+            return Ok(GroupMembersList);
+        }
+
         [HttpPost("CreateGroup")]
         public async Task<ActionResult<List<ShareGroup>>> CreateGroup(CreateShareGroupDto request)
         {
@@ -172,7 +184,7 @@ namespace WinterProjectAPIV4.Controllers
 
             //Query the UserGroup for that GroupID
 
-            var UserGroups = await context.UserGroups
+            List<UserGroup> UserGroups = await context.UserGroups
                 .Where(UserGroup => UserGroup.GroupId == request.GroupID)
                 .Include(UserGroup => UserGroup.User)
                 .ToListAsync();

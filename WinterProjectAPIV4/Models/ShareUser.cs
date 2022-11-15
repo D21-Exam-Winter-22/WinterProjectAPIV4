@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace WinterProjectAPIV4.Models;
 
@@ -21,5 +22,6 @@ public partial class ShareUser
 
     public bool? IsAdmin { get; set; }
 
+    [JsonIgnore]
     public virtual ICollection<UserGroup> UserGroups { get; } = new List<UserGroup>();
 }
