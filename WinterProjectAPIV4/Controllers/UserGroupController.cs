@@ -49,7 +49,8 @@ namespace WinterProjectAPIV4.Controllers
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Email = request.Email,
-                Password = request.Password
+                Password = request.Password, 
+                IsAdmin = request.IsAdmin
             };
 
             //Insert the user
