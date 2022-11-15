@@ -85,3 +85,4 @@ C:\Users\allan\source\repos\WinterProjectAPIV4\WinterProjectAPIV4\obj\Debug\net6
 C:\Users\allan\source\repos\WinterProjectAPIV4\WinterProjectAPIV4\obj\Debug\net6.0\WinterProjectAPIV4.pdb
 C:\Users\allan\source\repos\WinterProjectAPIV4\WinterProjectAPIV4\obj\Debug\net6.0\WinterProjectAPIV4.genruntimeconfig.cache
 C:\Users\allan\source\repos\WinterProjectAPIV4\WinterProjectAPIV4\obj\Debug\net6.0\ref\WinterProjectAPIV4.dll
+C:\Users\allan\source\repos\WinterProjectAPIV4\WinterProjectAPIV4\bin\Debug\net6.0\appsettings.Production.json
