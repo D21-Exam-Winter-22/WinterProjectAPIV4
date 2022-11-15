@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33103.184
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinterProjectAPIV4", "WinterProjectAPIV4\WinterProjectAPIV4.csproj", "{E52693A2-5263-41D7-A91B-BAF59F8ED686}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E52693A2-5263-41D7-A91B-BAF59F8ED686}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E52693A2-5263-41D7-A91B-BAF59F8ED686}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E52693A2-5263-41D7-A91B-BAF59F8ED686}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E52693A2-5263-41D7-A91B-BAF59F8ED686}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {91B399CD-B467-4836-B6C3-027E4DEF673C}
+	EndGlobalSection
+EndGlobal
