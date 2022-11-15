@@ -17,6 +17,12 @@ namespace WinterProjectAPIV4.Controllers
             this.context = context;
         }
 
+        [HttpGet("IsOnline")]
+        public async Task<ActionResult<bool>> ApplicationIsOnline()
+        {
+            return Ok(true);
+        }
+
         [HttpGet("GetAllUsers")]
         public async Task<ActionResult<List<ShareUser>>> GetUsers()
         {
@@ -42,6 +48,14 @@ namespace WinterProjectAPIV4.Controllers
         [HttpPost("CreateUser")]
         public async Task<ActionResult<List<ShareUser>>> CreateShareUser(CreateShareUserDto request)
         {
+            //TODO
+            //CHeck if the username already exists in the DB
+            List<ShareUser> ExistingUsers = await context.ShareUsers.Where(User => User.UserName == request.UserName).ToListAsync();
+            if (ExistingUsers.Count > 0)
+            {
+                return Conflict();
+            }
+            
             //Create the user to insert
             ShareUser UserToInsert = new ShareUser
             {
@@ -81,6 +95,33 @@ namespace WinterProjectAPIV4.Controllers
             }
             await context.SaveChangesAsync();
             return RecordToChange;
+        }
+
+        [HttpGet("GetDetailsOnUsername/{UserName}")]
+        public async Task<ActionResult<CreateShareUserDto>> GetLogInDetails(string UserName)
+        {
+            List<ShareUser> UsersList = await context.ShareUsers.Where(User => User.UserName == UserName).ToListAsync();
+            if (UsersList.Count == 0)
+            {
+                return NotFound();
+            }
+            CreateShareUserDto User = null;
+            foreach (var SingleUser in UsersList)
+            {
+                User = new CreateShareUserDto
+                {
+                    UserName = SingleUser.UserName,
+                    PhoneNumber = SingleUser.PhoneNumber,
+                    FirstName = SingleUser.FirstName,
+                    LastName = SingleUser.LastName,
+                    Email = SingleUser.Email,
+                    IsAdmin = SingleUser.IsAdmin,
+                    Password = SingleUser.Password
+                };
+                break;
+            }
+            //If returns null, user doesnt exist?
+            return Ok(User);
         }
 
         [HttpGet("GetAllGroups")]
@@ -214,8 +255,10 @@ namespace WinterProjectAPIV4.Controllers
         {
             return Ok(await context.Expenses.ToListAsync());
         }
+        
+        
 
-        [HttpGet("GetAllExpensesOnGroupID")]
+        [HttpGet("GetAllExpensesOnGroupID/{GroupID}")]
         public async Task<ActionResult<List<GetAllExpensesDto>>> getAllExpensesOnGroupID(int GroupID)
         {
             var query = from expense in context.Expenses
