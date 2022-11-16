@@ -48,7 +48,7 @@ namespace WinterProjectAPIV4.Controllers
         [HttpPost("CreateUser")]
         public async Task<ActionResult<List<ShareUser>>> CreateShareUser(CreateShareUserDto request)
         {
-            //TODO
+            
             //CHeck if the username already exists in the DB
             List<ShareUser> ExistingUsers = await context.ShareUsers.Where(User => User.UserName == request.UserName).ToListAsync();
             if (ExistingUsers.Count > 0)
@@ -149,6 +149,9 @@ namespace WinterProjectAPIV4.Controllers
         [HttpPost("CreateGroup")]
         public async Task<ActionResult<List<ShareGroup>>> CreateGroup(CreateShareGroupDto request)
         {
+            //TODO
+            //Should we prevent groups with the same name?
+            
             //Create a ShareGroup entry
             ShareGroup GroupToInsert = new ShareGroup
             {
@@ -495,5 +498,150 @@ namespace WinterProjectAPIV4.Controllers
 
             return await CalculateIndividualSharesInGroup(GroupID);
         }
+
+        [HttpGet("GetPersonalExpenses/{UserID}")]
+        public async Task<ActionResult<List<GetAllExpensesDto>>> GetAllPersonalExpenses(int UserID)
+        {
+            //Join Expenses to UserGroup to Group and User
+            
+            var ListOfExpensesQuery = from expense in context.Expenses
+                join usergroup in context.UserGroups on expense.UserGroupId equals usergroup.UserGroupId
+                join user in context.ShareUsers on usergroup.UserId equals user.UserId
+                join sharegroup in context.ShareGroups on usergroup.GroupId equals sharegroup.GroupId
+                where user.UserId == UserID
+                    select new
+                    {
+                        expense.ExpenseId,
+                        expense.Amount,
+                        ExpenseName = expense.Name,
+                        ExpenseDescription = expense.Description,
+                        SelectedUserID = user.UserId,
+                        user.UserName,
+                        user.FirstName,
+                        user.LastName,
+                        user.PhoneNumber,
+                        user.Email,
+                        sharegroup.GroupId,
+                        GroupName = sharegroup.Name,
+                        GroupDescription = sharegroup.Description
+                    };
+
+            List<GetAllExpensesDto> ListOfPersonalExpenses = new List<GetAllExpensesDto>();
+
+            foreach (var expense in ListOfExpensesQuery)
+            {
+                GetAllExpensesDto PersonalExpense = new GetAllExpensesDto
+                {
+                    ExpenseId = expense.ExpenseId,
+                    Amount = expense.Amount,
+                    UserId = expense.SelectedUserID,
+                    GroupId = expense.GroupId,
+                    GroupName = expense.GroupName,
+                    UserName = expense.UserName,
+                    PhoneNumber = expense.PhoneNumber,
+                    FirstName = expense.FirstName,
+                    LastName = expense.LastName,
+                    Email = expense.Email,
+                    ExpenseName = expense.ExpenseName,
+                    ExpenseDescription = expense.ExpenseDescription,
+                    GroupDescription = expense.GroupDescription
+                };
+                ListOfPersonalExpenses.Add(PersonalExpense);
+            }
+
+            if (ListOfExpensesQuery.Count() == 0)
+            {
+                return NotFound();
+            }
+
+            return Ok(ListOfExpensesQuery);
+        }
+
+        [HttpDelete("RemoveMemberFromGroup")]
+        public async Task<ActionResult<List<UserGroup>>> RemoveMemberFromGroup(UserGroupDto request)
+        {
+            //Have to delete all entries from UserGroup where the userID and GroupID match
+            context.UserGroups.RemoveRange(
+                context.UserGroups.Where(
+                    usergroup => usergroup.UserId == request.UserID && usergroup.GroupId == request.GroupID));
+            await context.SaveChangesAsync();
+            return await GetAllGroupMembers((int)request.GroupID);
+        }
+
+        [HttpPut("UpdateGroupDetails")]
+        public async Task<ActionResult<List<UserGroup>>> UpdateGroupDetails(UpdateGroupDetailsDto request)
+        {
+            var query = from sharegroup in context.ShareGroups
+                where sharegroup.GroupId == request.GroupID
+                    select new
+                    {
+                        sharegroup.GroupId
+                    };
+
+            int rowCounter = 0;
+            foreach (var row in query)
+            {
+                rowCounter++;
+            }
+            
+            //Check if the record exists
+            if (rowCounter == 0)
+            {
+                return NotFound();
+            }
+            //Find the record
+            ShareGroup RecordToChange = context.ShareGroups.Find(request.GroupID);
+            
+            RecordToChange.Name = request.NewGroupName;
+            RecordToChange.Description = request.NewGroupDescription;
+
+            //Save the changes
+            await context.SaveChangesAsync();
+            return await GetAllGroupMembers((int)request.GroupID);
+        }
+
+        [HttpPut("EditAnExpense")]
+        public async Task<ActionResult<List<GetAllExpensesDto>>> EditExpenditure(Expense request)
+        {
+            //Check if such an expenditure even exists
+            var CheckIfExistsQuery = from expense in context.Expenses
+                where expense.ExpenseId == request.ExpenseId
+                select new
+                {
+                    expense.ExpenseId,
+                    expense.UserGroupId
+                };
+            int counter = 0;
+            int UserGroupID = -1;
+            foreach (var entry in CheckIfExistsQuery)
+            {
+                counter++;
+                UserGroupID = (int)entry.UserGroupId;
+            }
+
+            if (counter == 0)
+            {
+                return NotFound();
+            }
+            
+            //Find the expenditure
+            List<Expense> ListOfRecords = await context.Expenses.Where(expense => expense.ExpenseId == request.ExpenseId).ToListAsync();
+            Expense RecordToUpdate = ListOfRecords.First();
+            
+            //Update them
+            RecordToUpdate.Amount = request.Amount;
+            RecordToUpdate.Name = request.Name;
+            RecordToUpdate.Description = request.Description;
+            await context.SaveChangesAsync();
+            
+            //Get the userID for the usergroupid
+
+            UserGroup UserGroup = context.UserGroups.Find(UserGroupID);
+            int UserID = (int)UserGroup.UserId;
+            
+            return await GetAllPersonalExpenses(UserID);
+        }
+     
+        
     }
 }
