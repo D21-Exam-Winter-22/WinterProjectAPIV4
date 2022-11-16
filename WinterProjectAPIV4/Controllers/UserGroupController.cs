@@ -18,7 +18,7 @@ namespace WinterProjectAPIV4.Controllers
         }
 
         [HttpGet("IsOnline")]
-        public async Task<ActionResult<bool>> ApplicationIsOnline()
+        public async Task<ActionResult<bool>>? ApplicationIsOnline()
         {
             return Ok(true);
         }
@@ -273,14 +273,18 @@ namespace WinterProjectAPIV4.Controllers
                         {
                             expense.ExpenseId,
                             expense.Amount,
+                            ExpenseName = expense.Name,
+                            ExpenseDescription = expense.Description,
                             usergroup.UserId,
                             usergroup.GroupId,
                             sharegroup.Name,
+                            GroupDescription = sharegroup.Description,
                             shareuser.UserName,
                             shareuser.PhoneNumber,
                             shareuser.FirstName,
                             shareuser.LastName,
-                            shareuser.Email
+                            shareuser.Email,   
+                           
                         };
             List<GetAllExpensesDto> QueriedList = new List<GetAllExpensesDto>();
             foreach (var record in query)
@@ -296,7 +300,10 @@ namespace WinterProjectAPIV4.Controllers
                     PhoneNumber = record.PhoneNumber,
                     FirstName = record.FirstName,
                     LastName = record.LastName,
-                    Email = record.Email
+                    Email = record.Email,
+                    ExpenseName= record.ExpenseName,    
+                    ExpenseDescription= record.ExpenseDescription,
+                    GroupDescription= record.GroupDescription
                 });
             }
 
@@ -641,6 +648,8 @@ namespace WinterProjectAPIV4.Controllers
             
             return await GetAllPersonalExpenses(UserID);
         }
+
+
      
         
     }
