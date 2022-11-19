@@ -7,18 +7,21 @@ namespace APIServicesTestProject;
 
 public class UnitTest1
 {
-    [Fact]
-    public async void Test1()
-    {
-        //Arrange
-        bool? ExpectedResult = true;
-        PaymentApidbContext DbContext = A.Fake<PaymentApidbContext>();
-        UserGroupController Controller = new UserGroupController(DbContext);
+    private readonly PaymentApidbContext _context;
+    private readonly UserGroupController _userGroupController;
 
-        //Act
-        var actionResult = await Controller.ApplicationIsOnline();
+    public UnitTest1()
+    {
+        _context = new PaymentApidbContext();
+        _userGroupController = new UserGroupController(_context);
+    }
+
+    [Fact]
+    public async void ApplicationIsOnlineTest()
+    {
+        var okResult = _userGroupController.ApplicationIsOnline().Result;
 
         //Assert      
-        Assert.Equal(ExpectedResult, actionResult.Value);
+        Assert.IsType<OkResult>(okResult);
     }
 }

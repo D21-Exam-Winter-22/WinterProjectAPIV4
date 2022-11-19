@@ -29,7 +29,7 @@ namespace WinterProjectAPIV4.Controllers
             var users = await context.ShareUsers.ToListAsync();
             if (users == null)
             {
-                return NotFound();
+                return NotFound(users);
             }
             return Ok(users);
         }
@@ -40,7 +40,7 @@ namespace WinterProjectAPIV4.Controllers
             var SearchedUser = context.ShareUsers.Find(ID);
             if (SearchedUser == null)
             {
-                return NotFound();
+                return NotFound(SearchedUser);
             }
             return Ok(SearchedUser);
         }
@@ -91,7 +91,7 @@ namespace WinterProjectAPIV4.Controllers
             }
             else
             {
-                return NotFound();
+                return NotFound(RecordToChange);
             }
             await context.SaveChangesAsync();
             return RecordToChange;
@@ -103,7 +103,7 @@ namespace WinterProjectAPIV4.Controllers
             List<ShareUser> UsersList = await context.ShareUsers.Where(User => User.UserName == UserName).ToListAsync();
             if (UsersList.Count == 0)
             {
-                return NotFound();
+                return NotFound(UsersList);
             }
             CreateShareUserDto User = null;
             foreach (var SingleUser in UsersList)
@@ -130,7 +130,7 @@ namespace WinterProjectAPIV4.Controllers
             List<ShareGroup> AllGroupsList = await context.ShareGroups.ToListAsync();
             if (AllGroupsList == null)
             {
-                return NotFound();
+                return NotFound(AllGroupsList);
             }
             return Ok(AllGroupsList);
         }
@@ -214,7 +214,7 @@ namespace WinterProjectAPIV4.Controllers
             }
             if (ExistingGroup == null)
             {
-                return NotFound();
+                return NotFound("Group does not exist");
             }
             UserGroup UserGroupToInsert = new UserGroup
             {
@@ -245,7 +245,7 @@ namespace WinterProjectAPIV4.Controllers
             }
             else
             {
-                return NotFound();
+                return NotFound("Group not found");
             }
 
             await context.SaveChangesAsync();
@@ -309,7 +309,7 @@ namespace WinterProjectAPIV4.Controllers
 
             if (QueriedList.Count == 0)
             {
-                return NotFound();
+                return NotFound(QueriedList);
             }
             else
             {
@@ -400,11 +400,16 @@ namespace WinterProjectAPIV4.Controllers
                 .Include(Expense => Expense.UserGroup.Group)
                 .Where(UserGroup => UserGroup.UserGroup.GroupId == GroupID)
                 .ToListAsync();
+            
+            //Query to get the distinct userIDs
+            List<UserGroup> DistinctUserIDsQuery =
+                await context.UserGroups.Where(usergroup => usergroup.GroupId == GroupID).ToListAsync();
 
             // Group by UserID and sum the Amount
             //Get all the distinct UserIDs
-            List<int> DistinctUserIDs =
-                AllExpensesQuery.Select(entry => (int)entry.UserGroup.UserId).Distinct().ToList();
+           
+
+            List<int> DistinctUserIDs = DistinctUserIDsQuery.Select(entry => (int)entry.UserId).ToList();
 
             //Sum up all their individual expenses and create a list of MoneyOwedByUserGroupDto Objects
             List<MoneyOwedByUserGroupDto> ListOfMoneyOwedByUsersGroup = new List<MoneyOwedByUserGroupDto>();
@@ -459,7 +464,7 @@ namespace WinterProjectAPIV4.Controllers
                     .Sum(entries => entries.Amount);
 
                 //Find the user in the ListOfMoneyOwedByUsersGroup and assign the AmountAlreadyPaid to TotalPayment
-                MoneyOwedByUserGroupDto CurrentUser = ListOfMoneyOwedByUsersGroup.Single(user => user.UserID == UserID);
+                MoneyOwedByUserGroupDto CurrentUser = ListOfMoneyOwedByUsersGroup.First(user => user.UserID == UserID);
                 CurrentUser.AmountAlreadyPaid = TotalInPayment;
             }
 
@@ -477,6 +482,8 @@ namespace WinterProjectAPIV4.Controllers
         [HttpPost("PayIntoGroupPool")]
         public async Task<ActionResult<List<MoneyOwedByUserGroupDto>>> PayIntoGroupPool(InPaymentDto request)
         {
+            
+            
             //Create an InPayment Object
             InPayment InPayment = new InPayment
             {
@@ -558,19 +565,42 @@ namespace WinterProjectAPIV4.Controllers
 
             if (ListOfExpensesQuery.Count() == 0)
             {
-                return NotFound();
+                return NotFound(ListOfPersonalExpenses);
             }
 
-            return Ok(ListOfExpensesQuery);
+            return Ok(ListOfPersonalExpenses);
         }
 
         [HttpDelete("RemoveMemberFromGroup")]
         public async Task<ActionResult<List<UserGroup>>> RemoveMemberFromGroup(UserGroupDto request)
         {
+            //TODO: IMPROVE THE SPEED OF THIS QUERY.
+            //Delete related expenses and inpayments
+            
+            //Delete expenses
+                //Get list of UserGroups
+            List<UserGroup> usergroups = await context.UserGroups.Where(entry =>
+                entry.UserId == request.UserID && entry.GroupId == request.GroupID).ToListAsync();
+                //Using the usergroups, delete the expenses
+
+                foreach (UserGroup usergroup in usergroups)
+                {
+                    await context.Expenses.Where(entry => entry.UserGroupId == usergroup.UserGroupId)
+                        .ExecuteDeleteAsync();
+                    await context.SaveChangesAsync();
+                }
+            
+            
+                //delete inpayments
+            foreach (UserGroup usergroup in usergroups)
+            {
+                await context.InPayments.Where(entry => entry.UserGroupId == usergroup.UserGroupId)
+                    .ExecuteDeleteAsync();
+                await context.SaveChangesAsync();
+            }
+
             //Have to delete all entries from UserGroup where the userID and GroupID match
-            context.UserGroups.RemoveRange(
-                context.UserGroups.Where(
-                    usergroup => usergroup.UserId == request.UserID && usergroup.GroupId == request.GroupID));
+            context.UserGroups.RemoveRange(context.UserGroups.Where(usergroup => usergroup.UserId == request.UserID && usergroup.GroupId == request.GroupID));
             await context.SaveChangesAsync();
             return await GetAllGroupMembers((int)request.GroupID);
         }
@@ -592,10 +622,7 @@ namespace WinterProjectAPIV4.Controllers
             }
             
             //Check if the record exists
-            if (rowCounter == 0)
-            {
-                return NotFound();
-            }
+            
             //Find the record
             ShareGroup RecordToChange = context.ShareGroups.Find(request.GroupID);
             
@@ -604,7 +631,15 @@ namespace WinterProjectAPIV4.Controllers
 
             //Save the changes
             await context.SaveChangesAsync();
-            return await GetAllGroupMembers((int)request.GroupID);
+            
+            if (rowCounter == 0)
+            {
+                return NotFound(await GetAllGroupMembers((int)request.GroupID));
+            }
+            else
+            {
+                return Ok(await GetAllGroupMembers((int)request.GroupID));
+            }
         }
 
         [HttpPut("EditAnExpense")]
@@ -648,9 +683,183 @@ namespace WinterProjectAPIV4.Controllers
             
             return await GetAllPersonalExpenses(UserID);
         }
-
-
-     
         
+        
+        [HttpPut("EditInPayment")]
+        public async void EditAnInPayment(InPaymentDto request)
+        {
+            //Get the particular inpayment entry
+            InPayment RecordToUpdate = context.InPayments.Find(request.TransactionID);
+            
+            //Update the details
+            {
+                RecordToUpdate.UserGroupId = request.UserGroupId;
+                RecordToUpdate.Amount = request.Amount;
+            }
+            await context.SaveChangesAsync();
+        }
+        
+        
+        [HttpGet("GetAllUserInPayments/{UserID}")]
+        public async Task<ActionResult<List<UserInPaymentsDto>>> GetAllInPayments(int UserID)
+        {
+            var GetAllUserInPaymentsQuery = from inpayments in context.InPayments
+                join usergroup in context.UserGroups on inpayments.UserGroupId equals usergroup.UserGroupId
+                join shareUser in context.ShareUsers on usergroup.UserId equals shareUser.UserId
+                where shareUser.UserId == UserID
+                select new
+                {
+                    inpayments.TransactionId,
+                    inpayments.Amount,
+                    usergroup.UserGroupId,
+                    GroupID = usergroup.GroupId,
+                    shareUser.UserId,
+                    shareUser.UserName,
+                    shareUser.FirstName,
+                    shareUser.LastName,
+                    shareUser.PhoneNumber,
+                    shareUser.Email
+                };
+            List<UserInPaymentsDto> ListOfUserInpayments = new List<UserInPaymentsDto>(); 
+            foreach (var entry in GetAllUserInPaymentsQuery)
+            {
+                UserInPaymentsDto NewEntry = new UserInPaymentsDto
+                {
+                    TransactionID = entry.TransactionId,
+                    Amount = entry.Amount,
+                    UserGroupID = entry.UserGroupId,
+                    GroupID = (int)entry.GroupID,
+                    UserID = entry.UserId,
+                    UserName = entry.UserName,
+                    FirstName = entry.FirstName,
+                    LastName = entry.LastName,
+                    PhoneNumber = entry.PhoneNumber,
+                    Email = entry.Email
+
+                };
+                ListOfUserInpayments.Add(NewEntry);
+            }
+            return Ok(ListOfUserInpayments);
+        }
+        
+        //TODO
+        [HttpGet("GetAllGroupInPayments/{GroupID}")]
+        public async Task<ActionResult<List<InPaymentDto>>> GetAllGroupInPayments(int GroupID)
+        {
+            var GroupInPaymentsQuery = from inpayments in context.InPayments
+                join usergroup in context.UserGroups on inpayments.UserGroupId equals usergroup.UserGroupId
+                join user in context.ShareUsers on usergroup.UserId equals user.UserId
+                join sharegroup in context.ShareGroups on usergroup.GroupId equals sharegroup.GroupId
+                where usergroup.GroupId == GroupID
+                select new
+                {
+                    inpayments.TransactionId,
+                    inpayments.Amount,
+                    usergroup.UserGroupId,
+                    sharegroup.GroupId,
+                    sharegroup.Name,
+                    sharegroup.Description,
+                    user.UserId,
+                    user.UserName,
+                    user.FirstName,
+                    user.LastName,
+                    user.PhoneNumber,
+                    user.Email
+                };
+
+            List<UserGroupPaymentDto> ListOfGroupInpayments = new List<UserGroupPaymentDto>();
+
+            foreach (var entry in GroupInPaymentsQuery)
+            {
+                UserGroupPaymentDto NewEntry = new UserGroupPaymentDto
+                {
+                    TransactionID = entry.TransactionId,
+                    PaidAmount = entry.Amount,
+                    UserGroupID = entry.UserGroupId,
+                    GroupID = entry.GroupId,
+                    GroupName = entry.Name,
+                    GroupDescription = entry.Description,
+                    UserID = entry.UserId,
+                    UserName = entry.UserName,
+                    FirstName = entry.FirstName,
+                    LastName = entry.LastName,
+                    PhoneNumber = entry.PhoneNumber,
+                    Email = entry.Email
+                };
+                ListOfGroupInpayments.Add(NewEntry);
+            }
+            return Ok(ListOfGroupInpayments);
+        }
+        
+        
+        [HttpGet("GetExpense/{ExpenseID}")]
+        public async Task<ActionResult<Expense>> GetExpenseOnExpenseID(int ExpenseID)
+        {
+            return Ok(context.Expenses.Find(ExpenseID));
+        }
+        
+        
+        [HttpGet("GetInPayment/{TransactionID}")]
+        public async Task<ActionResult<InPayment>> GetInPaymentOnTransactionID(int TransactionID)
+        {
+            return Ok(context.InPayments.Find(TransactionID));
+        }
+        
+        
+        [HttpDelete("DeleteUser/{UserID}")]
+        public async Task<ActionResult<string>> DeleteUserOnUserID(int UserID)
+        {
+            //Get All the groups which this user is in (GroupIDs)
+            List<UserGroup> ListOfParticipatingGroups = await context.UserGroups.Where(entry => entry.UserId == UserID).ToListAsync();
+            //Then just user RemoveMemberFromGroup for everyone of those group IDs
+            foreach (var usergroup in ListOfParticipatingGroups)
+            {
+                UserGroupDto UserGroupToRemove = new UserGroupDto
+                {
+                    UserID = usergroup.UserId,
+                    GroupID = usergroup.GroupId
+                };
+                await RemoveMemberFromGroup(UserGroupToRemove);
+            }
+            //Then delete the user
+            await context.ShareUsers.Where(entry => entry.UserId == UserID).ExecuteDeleteAsync();
+            await context.SaveChangesAsync();
+            return Ok("Deleted");
+
+        }
+        
+        [HttpDelete("DeleteGroup/{GroupID}")]
+        public async Task<ActionResult<string>> DeleteGroupOnGroupID(int GroupID)
+        {
+            //To delete a group, you need to first remove all members from that group
+            
+            //So find all the members in the group,
+            List<UserGroup> ListOfParticipatingGroupMembers =
+                await context.UserGroups.Where(entry => entry.GroupId == GroupID).ToListAsync();
+            //Then user RemoveMemberFromGroup for every one of those members
+            foreach (var usergroup in ListOfParticipatingGroupMembers)
+            {
+                UserGroupDto UserGroupToRemove = new UserGroupDto
+                {
+                    UserID = usergroup.UserId,
+                    GroupID = usergroup.GroupId
+                };
+                await RemoveMemberFromGroup(UserGroupToRemove);
+            }
+
+            //Then delete the group
+            await context.ShareGroups.Where(entry => entry.GroupId == GroupID).ExecuteDeleteAsync();
+            await context.SaveChangesAsync();
+            return Ok("Deleted");
+        }
+        
+        //TODO Delete InPayment on TransactionID
+        [HttpDelete("DeleteInPayment/{TransactionID}")]
+        public async Task<ActionResult<string>> DeleteInPaymentOnTransactionID(int TransactionID)
+        {
+            await context.InPayments.Where(entry => entry.TransactionId == TransactionID).ExecuteDeleteAsync();
+            await context.SaveChangesAsync();
+            return Ok("Deleted");
+        }
     }
 }
