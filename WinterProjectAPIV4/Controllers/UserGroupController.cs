@@ -18,9 +18,9 @@ namespace WinterProjectAPIV4.Controllers
         }
 
         [HttpGet("IsOnline")]
-        public async Task<ActionResult<bool>>? ApplicationIsOnline()
+        public bool ApplicationIsOnline()
         {
-            return Ok(true);
+            return true;
         }
 
         [HttpGet("GetAllUsers")]
@@ -35,14 +35,14 @@ namespace WinterProjectAPIV4.Controllers
         }
 
         [HttpGet("GetUserByID/{ID}")]
-        public async Task<ActionResult<ShareUser>> GetUserOnID(int ID)
+        public ShareUser GetUserOnID(int ID)
         {
             var SearchedUser = context.ShareUsers.Find(ID);
             if (SearchedUser == null)
             {
-                return NotFound(SearchedUser);
+                return SearchedUser;
             }
-            return Ok(SearchedUser);
+            return SearchedUser;
         }
 
         [HttpPost("CreateUser")]
