@@ -37,7 +37,7 @@ namespace WinterProjectAPIV4.Controllers
         [HttpGet("GetUserByID/{ID}")]
         public ShareUser GetUserOnID(int ID)
         {
-            var SearchedUser = context.ShareUsers.Find(ID);
+            ShareUser SearchedUser = context.ShareUsers.Find(ID);
             if (SearchedUser == null)
             {
                 return SearchedUser;
@@ -94,7 +94,7 @@ namespace WinterProjectAPIV4.Controllers
                 return NotFound(RecordToChange);
             }
             await context.SaveChangesAsync();
-            return RecordToChange;
+            return Ok(RecordToChange);
         }
 
         [HttpGet("GetDetailsOnUsername/{UserName}")]
@@ -160,7 +160,7 @@ namespace WinterProjectAPIV4.Controllers
                 HasConcluded = request.HasConcluded
             };
             //Insert the Group
-            context.ShareGroups.AddAsync(GroupToInsert);
+            await context.ShareGroups.AddAsync(GroupToInsert);
             await context.SaveChangesAsync();
 
             //Get the ID of inserted ShareGroup
@@ -174,7 +174,7 @@ namespace WinterProjectAPIV4.Controllers
                 IsOwner = true,
             };
 
-            context.UserGroups.AddAsync(UserGroupToInsert);
+            await context.UserGroups.AddAsync(UserGroupToInsert);
             await context.SaveChangesAsync();
 
             return await GetAllGroups();
@@ -853,7 +853,6 @@ namespace WinterProjectAPIV4.Controllers
             return Ok("Deleted");
         }
         
-        //TODO Delete InPayment on TransactionID
         [HttpDelete("DeleteInPayment/{TransactionID}")]
         public async Task<ActionResult<string>> DeleteInPaymentOnTransactionID(int TransactionID)
         {
@@ -861,5 +860,37 @@ namespace WinterProjectAPIV4.Controllers
             await context.SaveChangesAsync();
             return Ok("Deleted");
         }
+        
+        //TODO transfer ownership of group
+        [HttpPut("TransferGroupOwnership")]
+        public async Task<ActionResult<string>> TransferGroupOwnership(TransferGroupOwnershipDto request)
+        {
+            //Find the previous owner's UsergroupID
+            List<UserGroup> GetCurrentOwneruserGroupQuery = await context.UserGroups
+                .Where(entry => entry.UserId == request.PreviousOwnerUserID && entry.GroupId == request.GroupID)
+                .ToListAsync();
+            
+            UserGroup CurrentOwnerUserGroup = GetCurrentOwneruserGroupQuery.First();
+            //Set IsOwner to false
+            CurrentOwnerUserGroup.IsOwner = false;
+            //save changes
+            await context.SaveChangesAsync();
+
+            //Find the new Owner's Usergroup
+            List<UserGroup> GetNewOwnerUserGroupQuery = await context.UserGroups
+                .Where(entry => entry.UserId == request.NewOwnerUserID && entry.GroupId == request.GroupID)
+                .ToListAsync();
+            
+            UserGroup NewOwnerUserGroup = GetNewOwnerUserGroupQuery.First();
+            //Set IsOwner to true
+            NewOwnerUserGroup.IsOwner = true;
+            //save changes
+            await context.SaveChangesAsync();
+
+            return Ok("Transferred Ownership");
+        }
+        
+        //TODO  recover lost user account
+        
     }
 }
