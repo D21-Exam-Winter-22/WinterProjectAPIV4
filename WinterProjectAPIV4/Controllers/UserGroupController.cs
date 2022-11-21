@@ -12,9 +12,11 @@ namespace WinterProjectAPIV4.Controllers
     public class UserGroupController : ControllerBase
     {
         private readonly PaymentApidbContext context;
+        private Dictionary<int, string> TokenDictionary;
         public UserGroupController(PaymentApidbContext context)
         {
             this.context = context;
+            TokenDictionary = new Dictionary<int, string>();
         }
 
         [HttpGet("IsOnline")]
@@ -888,6 +890,19 @@ namespace WinterProjectAPIV4.Controllers
             await context.SaveChangesAsync();
 
             return Ok("Transferred Ownership");
+        }
+
+        [HttpGet("GetToken")]
+        public async Task<ActionResult<string>> GetToken(GetEncodingDto request)
+        {
+            string toEncode = request.Username + request.Password;
+            string EncodedValue = Base64.Encode(toEncode);
+
+            List<ShareUser> UsersList = await context.ShareUsers.Where(user => user.UserName == request.Username && user.Password == request.Password).ToListAsync();
+            ShareUser user = UsersList.First();
+            TokenDictionary.Add(user.UserId, EncodedValue);
+
+            return Ok(EncodedValue);
         }
         
         //TODO  recover lost user account
