@@ -899,6 +899,10 @@ namespace WinterProjectAPIV4.Controllers
             string EncodedValue = Base64.Encode(toEncode);
 
             List<ShareUser> UsersList = await context.ShareUsers.Where(user => user.UserName == request.Username && user.Password == request.Password).ToListAsync();
+            if (UsersList.Count == 0)
+            {
+                return NotFound();
+            }
             ShareUser user = UsersList.First();
             TokenDictionary.Add(user.UserId, EncodedValue);
 
