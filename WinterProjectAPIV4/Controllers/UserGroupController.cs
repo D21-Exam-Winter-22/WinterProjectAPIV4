@@ -406,6 +406,9 @@ namespace WinterProjectAPIV4.Controllers
         [HttpGet("MoneyOwedByEveryoneInGroupID/{GroupID}")]
         public async Task<ActionResult<List<MoneyOwedByUserGroupDto>>> CalculateIndividualSharesInGroup(int GroupID)
         {
+            //Get the group's name and description
+            ShareGroup TheGroup = context.ShareGroups.Find(GroupID);
+            
             //Calculating how much everyone paid from the group
             List<Expense> AllExpensesQuery = await context.Expenses
                 .Include(Expense => Expense.UserGroup)
@@ -431,11 +434,22 @@ namespace WinterProjectAPIV4.Controllers
             {
                 double TotalAmountOwed = (double)AllExpensesQuery.Where(row => row.UserGroup.UserId == UserID)
                     .Sum(entries => entries.Amount);
+                //Get the individual User's details
+                List<ShareUser> CurrentUsers = await context.ShareUsers.Where(entry => entry.UserId == UserID).ToListAsync();
+                ShareUser CurrentUser = CurrentUsers.First();
+                
+                //Construct the Dto to add to the list
                 MoneyOwedByUserGroupDto MoneyOwedByCurrentUser = new MoneyOwedByUserGroupDto
                 {
                     UserID = UserID,
                     GroupID = GroupID,
-                    AmountPaidDuringGroup = TotalAmountOwed
+                    AmountPaidDuringGroup = TotalAmountOwed,
+                    FirstName = CurrentUser.FirstName,
+                    LastName = CurrentUser.LastName,
+                    PhoneNumber = CurrentUser.PhoneNumber,
+                    UserName = CurrentUser.UserName,
+                    GroupName = TheGroup.Name,
+                    GroupDescription = TheGroup.Description
                 };
                 ListOfMoneyOwedByUsersGroup.Add(MoneyOwedByCurrentUser);
             }
@@ -903,8 +917,8 @@ namespace WinterProjectAPIV4.Controllers
             return Ok("Transferred Ownership");
         }
 
-        [HttpPost("GetToken")]
-        public async Task<ActionResult<string>> GetToken(GetEncodingDto request)
+        [HttpPost("Login")]
+        public async Task<ActionResult<string>> LoginForToken(GetEncodingDto request)
         {
             string toEncode = request.Username + request.Password;
             string EncodedValue = Base64.Encode(toEncode);
@@ -912,14 +926,15 @@ namespace WinterProjectAPIV4.Controllers
             List<ShareUser> UsersList = await context.ShareUsers.Where(user => user.UserName == request.Username && user.Password == request.Password).ToListAsync();
             if (UsersList.Count == 0)
             {
-                return NotFound("UsersList counter is 0");
+                return NotFound("Invalid user details");
             }
             ShareUser user = UsersList.First();
             TokenDictionary.Add(user.UserId, EncodedValue);
-
-            return Ok(EncodedValue);
+            string token = TokenDictionary[user.UserId];
+            return Ok(token);
         }
 
+        
         
         //TODO  recover lost user account
         
