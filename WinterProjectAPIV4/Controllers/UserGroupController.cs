@@ -29,7 +29,7 @@ namespace WinterProjectAPIV4.Controllers
         public async Task<ActionResult<List<ShareUser>>> GetUsers()
         {
             var users = await context.ShareUsers.ToListAsync();
-            if (users == null)
+            if (users.Count == 0)
             {
                 return NotFound(users);
             }
@@ -37,21 +37,21 @@ namespace WinterProjectAPIV4.Controllers
         }
 
         [HttpGet("GetUserByID/{ID}")]
-        public ShareUser GetUserOnID(int ID)
+        public async Task<ActionResult<ShareUser>> GetUserOnID(int ID)
         {
             ShareUser SearchedUser = context.ShareUsers.Find(ID);
             if (SearchedUser == null)
             {
-                return SearchedUser;
+                return NotFound(SearchedUser);
             }
-            return SearchedUser;
+            return Ok(SearchedUser);
         }
 
         [HttpPost("CreateUser")]
         public async Task<ActionResult<List<ShareUser>>> CreateShareUser(CreateShareUserDto request)
         {
             
-            //CHeck if the username already exists in the DB
+            //Check if the username already exists in the DB
             List<ShareUser> ExistingUsers = await context.ShareUsers.Where(User => User.UserName == request.UserName).ToListAsync();
             if (ExistingUsers.Count > 0)
             {
@@ -71,7 +71,7 @@ namespace WinterProjectAPIV4.Controllers
             };
 
             //Insert the user
-            context.ShareUsers.Add(UserToInsert);
+            await context.ShareUsers.AddAsync(UserToInsert);
             await context.SaveChangesAsync();
 
             return await GetUsers();
@@ -103,26 +103,26 @@ namespace WinterProjectAPIV4.Controllers
         public async Task<ActionResult<CreateShareUserDto>> GetLogInDetails(string UserName)
         {
             List<ShareUser> UsersList = await context.ShareUsers.Where(User => User.UserName == UserName).ToListAsync();
+            
+            ShareUser SingleUser = UsersList.First();
+            CreateShareUserDto User = null;
+            
             if (UsersList.Count == 0)
             {
-                return NotFound(UsersList);
+                return NotFound(User);
             }
-            CreateShareUserDto User = null;
-            foreach (var SingleUser in UsersList)
+            
+            User = new CreateShareUserDto
             {
-                User = new CreateShareUserDto
-                {
-                    UserName = SingleUser.UserName,
-                    PhoneNumber = SingleUser.PhoneNumber,
-                    FirstName = SingleUser.FirstName,
-                    LastName = SingleUser.LastName,
-                    Email = SingleUser.Email,
-                    IsAdmin = SingleUser.IsAdmin,
-                    Password = SingleUser.Password
-                };
-                break;
-            }
-            //If returns null, user doesnt exist?
+                UserName = SingleUser.UserName,
+                PhoneNumber = SingleUser.PhoneNumber,
+                FirstName = SingleUser.FirstName,
+                LastName = SingleUser.LastName,
+                Email = SingleUser.Email,
+                IsAdmin = SingleUser.IsAdmin,
+                Password = SingleUser.Password
+            };
+            
             return Ok(User);
         }
 
@@ -144,6 +144,17 @@ namespace WinterProjectAPIV4.Controllers
                 .Include(UserGroup => UserGroup.User)
                 .Include(Group => Group.Group)
                 .Where(Group => Group.GroupId == GroupID).ToListAsync();
+            
+            
+            return Ok(GroupMembersList);
+        }
+
+        [HttpGet("GetAllUserGroups")]
+        public async Task<ActionResult<List<UserGroup>>> GetAllUserGroups()
+        {
+            List<UserGroup> GroupMembersList = await context.UserGroups
+                .Include(UserGroup => UserGroup.User)
+                .Include(Group => Group.Group).ToListAsync();
 
             return Ok(GroupMembersList);
         }
@@ -892,7 +903,7 @@ namespace WinterProjectAPIV4.Controllers
             return Ok("Transferred Ownership");
         }
 
-        [HttpGet("GetToken")]
+        [HttpPost("GetToken")]
         public async Task<ActionResult<string>> GetToken(GetEncodingDto request)
         {
             string toEncode = request.Username + request.Password;
@@ -901,13 +912,14 @@ namespace WinterProjectAPIV4.Controllers
             List<ShareUser> UsersList = await context.ShareUsers.Where(user => user.UserName == request.Username && user.Password == request.Password).ToListAsync();
             if (UsersList.Count == 0)
             {
-                return NotFound();
+                return NotFound("UsersList counter is 0");
             }
             ShareUser user = UsersList.First();
             TokenDictionary.Add(user.UserId, EncodedValue);
 
             return Ok(EncodedValue);
         }
+
         
         //TODO  recover lost user account
         
