@@ -267,9 +267,58 @@ namespace WinterProjectAPIV4.Controllers
         }
 
         [HttpGet("GetAllExpenses")]
-        public async Task<ActionResult<List<Expense>>> GetAllExpenses()
+        public async Task<ActionResult<List<GetAllExpensesDto>>> GetAllExpenses()
         {
-            return Ok(await context.Expenses.ToListAsync());
+            var query = from expense in context.Expenses
+                        join usergroup in context.UserGroups on expense.UserGroupId equals usergroup.UserGroupId
+                        join sharegroup in context.ShareGroups on usergroup.GroupId equals sharegroup.GroupId
+                        join shareuser in context.ShareUsers on usergroup.UserId equals shareuser.UserId
+                        select new
+                        {
+                            expense.ExpenseId,
+                            expense.Amount,
+                            ExpenseName = expense.Name,
+                            ExpenseDescription = expense.Description,
+                            usergroup.UserId,
+                            usergroup.GroupId,
+                            sharegroup.Name,
+                            GroupDescription = sharegroup.Description,
+                            shareuser.UserName,
+                            shareuser.PhoneNumber,
+                            shareuser.FirstName,
+                            shareuser.LastName,
+                            shareuser.Email
+                        };
+
+            List<GetAllExpensesDto> QueriedList = new List<GetAllExpensesDto>();
+            foreach (var record in query)
+            {
+                QueriedList.Add(new GetAllExpensesDto
+                {
+                    ExpenseId = record.ExpenseId,
+                    Amount = record.Amount,
+                    UserId = record.UserId,
+                    GroupId = record.GroupId,
+                    GroupName = record.Name,
+                    UserName = record.UserName,
+                    PhoneNumber = record.PhoneNumber,
+                    FirstName = record.FirstName,
+                    LastName = record.LastName,
+                    Email = record.Email,
+                    ExpenseName = record.ExpenseName,
+                    ExpenseDescription = record.ExpenseDescription,
+                    GroupDescription = record.GroupDescription
+                });
+            }
+            if (QueriedList.Count == 0)
+            {
+                return NotFound(QueriedList);
+            }
+            else
+            {
+                return Ok(QueriedList);
+            }
+            //return Ok(await context.Expenses.ToListAsync());
         }
         
         
