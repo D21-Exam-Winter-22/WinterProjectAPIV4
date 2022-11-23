@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "xjYl5PJI4y/NyvA0+PrXa1GJgUs0ff71+sNEuLeZ7L1qcuH3SAFc+Rz7iouvNx0aDj/ojI4lKYBB4vPLkbqDHg==",
+  "dgSpecHash": "7PwMVDjoZ/cvdDGMTnd4yw4x6ysfdLa2cEuKfuFlkgrILi189kP2g0YNN3gzyXlaPruR0XZgWfP+/Hn3YEhd2Q==",
   "success": true,
-  "projectFilePath": "C:\\Users\\allan\\source\\repos\\WinterProjectAPIV4\\WinterProjectAPIV4\\WinterProjectAPIV4.csproj",
+  "projectFilePath": "C:\\Users\\allan\\Documents\\GitHub\\WinterProjectAPIV4\\WinterProjectAPIV4\\WinterProjectAPIV4.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\allan\\.nuget\\packages\\azure.core\\1.24.0\\azure.core.1.24.0.nupkg.sha512",
     "C:\\Users\\allan\\.nuget\\packages\\azure.identity\\1.6.0\\azure.identity.1.6.0.nupkg.sha512",
